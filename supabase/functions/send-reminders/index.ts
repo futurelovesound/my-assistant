@@ -34,8 +34,9 @@ Deno.serve(async (req) => {
       .in("path", ["settings/main", `days/${now.day}`]);
     const settings = docs?.find((d) => d.path === "settings/main")?.data ?? {};
     const today = docs?.find((d) => d.path === `days/${now.day}`)?.data ?? {};
-    const reminders: { id: string; time: string; text: string }[] = settings.reminders ?? [];
-    const due = reminders.filter((r) => { const t = toMin(r.time); return t <= now.min && t > now.min - WINDOW_MIN; });
+    const reminders: { id: string; time: string; text: string; date?: string | null }[] = settings.reminders ?? [];
+    // No date = daily; a date = one-time on that local day.
+    const due = reminders.filter((r) => { const t = toMin(r.time); return (!r.date || r.date === now.day) && t <= now.min && t > now.min - WINDOW_MIN; });
 
     for (const r of due) {
       const { error: dup } = await supabase.from("push_log").insert({ user_id: userId, reminder_id: r.id, day: now.day });

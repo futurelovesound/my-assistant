@@ -269,9 +269,13 @@ function monthbar() {
     <div class="mid"><h1>${monthName(ui.month)}</h1></div>
     <button class="arrow" data-act="month" data-n="1" aria-label="Следующий месяц">›</button></div>`;
 }
+// A reminder without date repeats daily; with date it fires once on that day.
+const remActive = (r, k = todayKey()) => !r.date || r.date === k;
+const remLabel = r => r.date ? `${prettyDay(r.date)}, разово` : "каждый день";
+const pruneRems = s => s.reminders = s.reminders.filter(r => !r.date || r.date >= todayKey());
 function nextReminder() {
   const s = settings(), now = new Date(), m = now.getHours() * 60 + now.getMinutes();
-  const list = [...s.reminders].sort((a, b) => a.time.localeCompare(b.time));
+  const list = s.reminders.filter(r => remActive(r)).sort((a, b) => a.time.localeCompare(b.time));
   return list.find(r => toMin(r.time) > m) || null;
 }
 
@@ -598,9 +602,9 @@ function vSetup() {
   </div>
   <div class="card">
     <div class="card-h"><h2>Напоминания</h2></div>
-    <div class="list">${[...s.reminders].sort((a, b) => a.time.localeCompare(b.time)).map(r => `<div class="li"><span class="num" style="width:52px">${esc(r.time)}</span><span class="grow">${esc(r.text)}</span><button class="x" data-act="delrem" data-id="${r.id}" aria-label="Удалить">×</button></div>`).join("")}</div>
-    <form class="row" data-form="addrem"><input type="time" id="rm-t" name="time" required style="flex:0 1 120px"><input type="text" id="rm-x" name="text" placeholder="Что напомнить" required style="flex:1 1 160px"><button class="btn">Добавить</button></form>
-    <div class="small muted">Время по часовому поясу устройства. Вечерние напоминания (после 20:00) подсказывают, сколько задач дня ещё не выполнено.</div>
+    <div class="list">${s.reminders.filter(r => !r.date || r.date >= todayKey()).sort((a, b) => (a.date || "").localeCompare(b.date || "") || a.time.localeCompare(b.time)).map(r => `<div class="li"><span class="num" style="width:52px">${esc(r.time)}</span><span class="grow">${esc(r.text)}<span class="small muted"> · ${remLabel(r)}</span></span><button class="x" data-act="delrem" data-id="${r.id}" aria-label="Удалить">×</button></div>`).join("")}</div>
+    <form class="row" data-form="addrem"><input type="time" id="rm-t" name="time" required style="flex:0 1 120px"><input type="text" id="rm-x" name="text" placeholder="Что напомнить" required style="flex:1 1 160px"><input type="date" id="rm-d" name="date" title="Дата для разового напоминания, пусто = каждый день" style="flex:0 1 150px"><button class="btn">Добавить</button></form>
+    <div class="small muted">Без даты напоминание приходит каждый день, с датой один раз. Время по часовому поясу устройства. Вечерние напоминания (после 20:00) подсказывают, сколько задач дня ещё не выполнено.</div>
   </div>
   <div class="card">
     <div class="card-h"><h2>Данные и аккаунт</h2><span class="meta">${esc(user && user.email || "")}</span></div>
@@ -770,7 +774,7 @@ document.addEventListener("submit", e => {
   else if (name === "addsave") { const target = num(v.target); if (!target) return; mutSavings(s => s.goals.push({ id: uid(), name: v.name.trim(), target, saved: num(v.saved) || 0, deadline: v.deadline || null })); }
   else if (name === "addgoal") mutPlan(ui.month, p => p.goals.push({ id: uid(), text: v.text.trim(), kind: v.kind, target: Math.max(1, num(v.target) || 1), progress: 0, done: false }));
   else if (name === "addhabit") mutSettings(s => s.habits.push({ id: uid(), text: v.text.trim() }));
-  else if (name === "addrem") mutSettings(s => s.reminders.push({ id: uid(), time: v.time, text: v.text.trim() }));
+  else if (name === "addrem") mutSettings(s => { pruneRems(s); s.reminders.push({ id: uid(), time: v.time, text: v.text.trim(), date: v.date && v.date >= todayKey() ? v.date : null }); });
   else if (name === "manual") { const kc = num(v.kcal); mutSettings(s => s.manual = kc ? { kcal: kc, p: num(v.p) || 0, f: num(v.f) || 0, c: num(v.c) || 0 } : null); return; }
   f.reset(); render();
 });
@@ -924,12 +928,13 @@ function chatPrompt(text, history) {
     month_money: { income: m.inc, spent: m.out, saved: m.sav, by_category: m.byCat },
     expense_categories: OUT_CATS, income_categories: IN_CATS, savings_goals: getSavings().goals.map(g => ({ name: g.name, saved: g.saved, target: g.target })),
     month_goals: getPlan(ymOf(k)).goals.map(g => ({ text: g.text, kind: g.kind, progress: g.progress, target: g.target, done: g.done })),
-    sports: Object.keys(SPORTS), meals: MEALS, reminders: s.reminders.map(r => r.time + " " + r.text)
+    sports: Object.keys(SPORTS), meals: MEALS, reminders: s.reminders.filter(r => !r.date || r.date >= k).map(r => (r.date ? r.date + " " : "каждый день ") + r.time + " " + r.text)
   };
   return `Ты личный ассистент внутри приложения-трекера (сон, питание, задачи, спорт, здоровье, финансы в тенге). Цель хозяйки: похудеть, наладить сон, ничего не забывать, копить деньги.
 Она пишет, что сделать или записать. Разбери сообщение на действия и ответь коротко по-русски, на «ты». На вопросы отвечай по данным из контекста. Не выдумывай: если не хватает важного (например, суммы), спроси и не добавляй это действие.
 
-Верни только JSON: {"reply": "текст ответа", "actions": [ ... ]}. Допустимые действия (date по умолчанию сегодня, «вчера» = предыдущий день):
+Если сейчас ночь (до 05:00), она ещё не ложилась: «завтра» и «утром» значат сегодняшнюю дату из now, а не следующую; не переспрашивай об этом.
+Верни только JSON: {"reply": "текст ответа", "actions": [ ... ]}. Допустимые действия (date по умолчанию сегодня, «вчера» = предыдущий день; будущая дата допустима только для add_task и add_reminder):
 {"type":"add_meal","date":"YYYY-MM-DD","meal":"Завтрак|Обед|Ужин|Перекус","name":"...","grams":число|null,"kcal":число,"p":число,"f":число,"c":число}  оцени КБЖУ сама, учитывай кухню Казахстана и СНГ; каждое блюдо отдельным действием
 {"type":"set_sleep","date":"...","bed":"HH:MM","wake":"HH:MM","quality":1-5|null}  date = день, когда проснулась
 {"type":"add_water","date":"...","ml":число}
@@ -942,7 +947,8 @@ function chatPrompt(text, history) {
 {"type":"add_tx","date":"...","kind":"out|in|save","amount":число,"category":"для out из expense_categories, для in из income_categories, для save имя из savings_goals","note":"..."}
 {"type":"add_goal","text":"...","kind":"count|check","target":число}
 {"type":"goal_progress","text":"точный текст цели из month_goals","delta":число}
-{"type":"add_reminder","time":"HH:MM","text":"..."}
+{"type":"add_reminder","time":"HH:MM","text":"...","date":"YYYY-MM-DD"|null}  date = разовое напоминание в этот день («напомни завтра в 13:00»); null = каждый день («напоминай каждый день»)
+Если просят записать дело и напомнить о нём, сделай два действия: add_task на нужную дату и add_reminder с той же датой.
 В reply коротко скажи, что записала. Полезную подсказку (например, сколько ккал осталось) добавляй, только если она к месту.
 
 Контекст: ${JSON.stringify(ctx)}
@@ -951,7 +957,8 @@ ${history.length ? "Предыдущие сообщения:\n" + history.map(m 
 }
 function applyActions(list) {
   const done = [], t = todayKey();
-  const dateOf = a => (/^\d{4}-\d{2}-\d{2}$/.test(a.date || "") && a.date <= t ? a.date : t);
+  const isDate = x => /^\d{4}-\d{2}-\d{2}$/.test(x || "");
+  const dateOf = a => (isDate(a.date) && (a.date <= t || a.type === "add_task") ? a.date : t);
   const lc = s => String(s || "").trim().toLowerCase();
   for (const a of list) {
     try {
@@ -1002,7 +1009,9 @@ function applyActions(list) {
         if (g0) { mutPlan(ymOf(t), p => { const g = p.goals.find(x => x.id === g0.id); if (g.kind === "check") g.done = true; else g.progress = Math.max(0, g.progress + (num(a.delta) || 1)); }); done.push(`Прогресс цели: ${g0.text}`); }
       } else if (a.type === "add_reminder" && /^\d{1,2}:\d{2}$/.test(a.time || "") && a.text) {
         const time = a.time.padStart(5, "0");
-        mutSettings(s => s.reminders.push({ id: uid(), time, text: String(a.text).trim() })); done.push(`Напоминание ${time}: ${a.text}`);
+        const date = isDate(a.date) && a.date >= t ? a.date : null;
+        mutSettings(s => { pruneRems(s); s.reminders.push({ id: uid(), time, text: String(a.text).trim(), date }); });
+        done.push(`Напоминание ${date ? prettyDay(date) + " " : "каждый день "}${time}: ${a.text}`);
       }
     } catch (e) { /* skip a malformed action, keep the rest */ }
   }
@@ -1034,7 +1043,7 @@ let lastMin = new Date().getHours() * 60 + new Date().getMinutes();
 setInterval(() => {
   const now = new Date(), m = now.getHours() * 60 + now.getMinutes();
   if (m === lastMin) return;
-  const hit = settings().reminders.filter(r => { const t = toMin(r.time); return t > lastMin && t <= m; });
+  const hit = settings().reminders.filter(r => { const t = toMin(r.time); return remActive(r) && t > lastMin && t <= m; });
   lastMin = m;
   if (hit.length && !document.hidden) toast("Напоминание: " + hit.map(r => r.text).join(" · "), 12000);
   if (ui.view === "today") render();
