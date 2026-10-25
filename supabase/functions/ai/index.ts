@@ -1,6 +1,6 @@
 // ИИ-функции приложения: подсчёт КБЖУ по описанию/фото и разбор периода. Ключ Anthropic хранится в секретах Supabase.
 import Anthropic from "npm:@anthropic-ai/sdk";
-import { createClient } from "npm:@supabase/supabase-js@2.45.4";
+import { createClient } from "npm:@supabase/supabase-js@2.117.2";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
