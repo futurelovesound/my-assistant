@@ -50,8 +50,8 @@ Deno.serve(async (req) => {
 
   // Only signed-in users of this app may spend the API key.
   const auth = req.headers.get("Authorization") ?? "";
-  const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: auth } } });
-  const { data: { user } } = await sb.auth.getUser();
+  const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  const { data: { user } } = await sb.auth.getUser(auth.replace(/^Bearer\s+/i, ""));
   if (!user) return json({ error: "unauthorized" }, 401);
 
   const key = Deno.env.get("ANTHROPIC_API_KEY");

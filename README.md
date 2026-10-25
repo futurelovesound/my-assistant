@@ -17,10 +17,10 @@
 2. **Supabase → Authentication → Providers → Email:** выключить «Confirm email», если не хочется подтверждать почту.
 3. **Ключи VAPID** для push: сгенерировать один раз (`npx web-push generate-vapid-keys`).
 4. **Supabase → Edge Functions → Secrets:** `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (`mailto:твоя@почта`), `CRON_SECRET` (любая длинная случайная строка), по желанию `ANTHROPIC_API_KEY`.
-5. **Функции:** задеплоить `send-reminders` (без проверки JWT) и `ai` (с проверкой JWT):
+5. **Функции:** задеплоить `send-reminders` (без проверки JWT) и `ai` (тоже без проверки JWT: функция сама проверяет вход):
    ```
    supabase functions deploy send-reminders --no-verify-jwt
-   supabase functions deploy ai
+   supabase functions deploy ai --no-verify-jwt
    ```
 6. **Расписание:** в `supabase/cron.sql` подставить `PROJECT_REF` и `CRON_SECRET`, выполнить в SQL Editor.
 7. **`config.js`:** вписать URL проекта Supabase, anon-ключ и публичный VAPID-ключ.
