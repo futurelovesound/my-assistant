@@ -370,7 +370,7 @@ function vFood() {
     <div class="card-h"><h2>Добавить еду</h2><div class="seg">${MEALS.map(m => `<button data-act="meal" data-m="${m}" class="${ui.meal === m ? "on" : ""}">${m}</button>`).join("")}</div></div>
     <div class="eyebrow">Быстро через ИИ</div>
     <textarea id="ai-food" placeholder="Опиши, что съела: «плов 250 г, салат из огурцов, чай с 2 ложками сахара»"></textarea>
-    <div class="row"><label class="btn sm" for="food-photo" style="cursor:pointer">Фото тарелки</label><input type="file" id="food-photo" accept="image/*" capture="environment" hidden><span id="photo-name" class="small muted"></span>
+    <div class="row"><label class="btn sm" for="food-photo" style="cursor:pointer">Фото тарелки</label><input type="file" id="food-photo" accept="image/*" hidden><span id="photo-name" class="small muted"></span>
       <button class="btn pri" data-act="parsefood" ${ui.parseBusy ? "disabled" : ""}>${ui.parseBusy ? "Считаю…" : "Посчитать КБЖУ"}</button></div>
     ${ui.parsed ? `<div class="list">${ui.parsed.map((x, i) => `<div class="li"><span class="grow">${esc(x.name)} <span class="muted small">${x.grams ? Math.round(x.grams) + " г" : ""}</span></span><span class="small muted">Б ${Math.round(x.p)} Ж ${Math.round(x.f)} У ${Math.round(x.c)}</span><span class="num">${Math.round(x.kcal)}</span><button class="x" data-act="dropparsed" data-i="${i}" aria-label="Убрать">×</button></div>`).join("")}</div>
       <div class="row"><button class="btn pri" data-act="addparsed">Добавить в «${ui.meal}»</button><button class="btn" data-act="clearparsed">Отмена</button><span class="small muted">Оценка ИИ примерная, ±15–20%.</span></div>` : ""}
@@ -727,6 +727,7 @@ document.addEventListener("click", e => {
   else if (a === "clearmanual") mutSettings(s => s.manual = null);
   else if (a === "export") exportData();
   else if (a === "chatex") sendChat(b.dataset.t);
+  else if (a === "chatphotox") { ui.chatPhoto = null; render(); }
   else if (a === "chatclear") put("chat/main", { msgs: [] });
   else if (a === "pushon") enablePush();
   else if (a === "pushoff") disablePush();
@@ -735,6 +736,12 @@ document.addEventListener("click", e => {
 document.addEventListener("change", e => {
   const el = e.target, k = ui.date;
   if (el.id === "imp-file") { if (el.files[0]) importData(el.files[0]); el.value = ""; return; }
+  if (el.id === "chat-photo") {
+    const draft = $("#chat-t") ? $("#chat-t").value : "";
+    ui.chatPhoto = el.files[0] || null; el.value = ""; render();
+    const t = $("#chat-t"); if (t) { t.value = draft; t.focus(); }
+    return;
+  }
   if (el.id === "food-photo") { $("#photo-name").textContent = el.files[0] ? el.files[0].name : ""; return; }
   if (el.dataset.act === "task") {
     const id = el.dataset.id, d0 = getDay(k), t0 = d0.tasks.find(t => t.id === id);
@@ -915,11 +922,14 @@ function vChat() {
     ${ui.chatBusy ? `<div class="bubble bot muted">Записываю…</div>` : ""}
   </div>
   <form class="chat-in" data-form="chat">
+    ${ui.chatPhoto ? `<div class="row chat-ph"><span class="tag habit">фото</span><span class="small muted grow">${esc(ui.chatPhoto.name || "из галереи")}</span><button class="x" type="button" data-act="chatphotox" aria-label="Убрать фото">×</button></div>` : ""}
+    <label class="btn" for="chat-photo" style="cursor:pointer;padding-inline:12px" aria-label="Прикрепить фото" title="Фото из галереи или камеры"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg></label>
+    <input type="file" id="chat-photo" accept="image/*" hidden>
     <textarea id="chat-t" name="text" rows="2" placeholder="Например: съела 2 яйца и тост, потратила 3000 на кофе" autocomplete="off"></textarea>
     <button class="btn pri" ${ui.chatBusy ? "disabled" : ""} aria-label="Отправить">Отправить</button>
   </form>`;
 }
-function chatPrompt(text, history) {
+function chatPrompt(text, history, hasPhoto) {
   const k = todayKey(), d = getDay(k), T = targets(), e = eaten(d), m = monthTotals(ymOf(k)), s = settings(), now = new Date();
   const ctx = {
     now: `${k} ${z(now.getHours())}:${z(now.getMinutes())}, ${weekday(k)}`,
@@ -953,7 +963,7 @@ function chatPrompt(text, history) {
 
 Контекст: ${JSON.stringify(ctx)}
 ${history.length ? "Предыдущие сообщения:\n" + history.map(m => (m.role === "user" ? "Она: " : "Ты: ") + m.text).join("\n") + "\n" : ""}
-Новое сообщение: ${text}`;
+${hasPhoto ? "К сообщению приложено фото. Еда: оцени блюда, вес и КБЖУ, добавь add_meal. Чек, скрин перевода или выписки: добавь add_tx с суммой и категорией. Скрин списка дел или заметки: добавь задачи. Если неясно, что сделать с фото, опиши, что видишь, и спроси.\n" : ""}Новое сообщение: ${text || "(только фото)"}`;
 }
 function applyActions(list) {
   const done = [], t = todayKey();
@@ -1018,14 +1028,17 @@ function applyActions(list) {
   return done;
 }
 async function sendChat(text) {
-  text = String(text || "").trim(); if (!text || ui.chatBusy) return;
+  text = String(text || "").trim(); const photo = ui.chatPhoto;
+  if ((!text && !photo) || ui.chatBusy) return;
   const ta = $("#chat-t"); if (ta) ta.value = "";
+  ui.chatPhoto = null;
   const history = getChat().msgs.slice(-6);
-  put("chat/main", { msgs: [...getChat().msgs, { id: uid(), role: "user", text, ts: Date.now() }].slice(-40) });
+  put("chat/main", { msgs: [...getChat().msgs, { id: uid(), role: "user", text: (photo ? "📷 Фото" + (text ? "\n" : "") : "") + text, ts: Date.now() }].slice(-40) });
   ui.chatBusy = true; render(); scrollChat();
   let reply, acts = [];
   try {
-    const res = await askJSON(chatPrompt(text, history));
+    const image = photo ? await shrinkImage(photo) : null;
+    const res = await askJSON(chatPrompt(text, history, !!photo), image);
     acts = applyActions(Array.isArray(res && res.actions) ? res.actions : []);
     reply = String((res && res.reply) || (acts.length ? "Готово." : "Не поняла, напиши по-другому."));
   } catch (e) { reply = aiErr(e && e.code); }
@@ -1036,7 +1049,7 @@ function scrollChat() { if (ui.view === "chat") requestAnimationFrame(() => wind
 document.addEventListener("keydown", e => {
   if (e.target.id === "chat-t" && e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); e.target.form.requestSubmit(); }
 });
-async function askJSON(prompt) { const res = await callAI({ kind: "chat", prompt }); return res.json; }
+async function askJSON(prompt, image) { const res = await callAI({ kind: "chat", prompt, image }); return res.json; }
 
 /* ---------- in-app reminders ---------- */
 let lastMin = new Date().getHours() * 60 + new Date().getMinutes();
