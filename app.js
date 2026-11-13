@@ -281,40 +281,12 @@ function nextReminder() {
 
 /* ---------- views ---------- */
 function vToday() {
-  const k = ui.date, d = getDay(k), s = settings(), T = targets(), e = eaten(d), sh = sleepH(d), ts = taskStats(d);
+  const k = ui.date, d = getDay(k), T = targets(), e = eaten(d);
   const nr = k === todayKey() ? nextReminder() : null;
-  const tasks = d.tasks || [];
-  const tagFor = t => t.kind === "habit" ? '<span class="tag habit">привычка</span>' : t.kind === "goal" ? '<span class="tag goal">цель месяца</span>' : t.carried ? '<span class="tag carry">перенесено</span>' : "";
   const w = lastWeight(k);
   return `
   ${datebar(k)}
-  <div class="card"><div class="rings">
-    ${ring(T ? e.k / T.kcal : 0, "var(--gold)", Math.round(e.k) + (T ? " / " + T.kcal : ""), "ккал")}
-    ${ring(sh ? sh / s.sleepHours : 0, "var(--sky)", sh ? hm(sh) : "—", "сон")}
-    ${ring(d.water / s.water, "var(--sky)", (d.water / 1000).toFixed(2).replace(".", ",") + " л", "вода")}
-    ${ring(ts.total ? ts.done / ts.total : 0, "var(--good)", ts.done + " / " + ts.total, "задачи")}
-  </div></div>
   ${nr ? `<div class="next"><div class="t">${esc(nr.time)}</div><div class="small"><div class="eyebrow">Следующее напоминание</div>${esc(nr.text)}</div></div>` : ""}
-
-  <div class="card">
-    <div class="card-h"><h2>План дня</h2><span class="meta">${ts.done} из ${ts.total} выполнено</span></div>
-    ${tasks.length ? `<div class="tasks">${tasks.map(t => `<div class="task ${t.done ? "done" : ""}">
-        <input type="checkbox" data-act="task" data-id="${t.id}" ${t.done ? "checked" : ""} aria-label="Выполнено">
-        <span class="tx">${esc(t.text)}</span>${tagFor(t)}<button class="x" data-act="deltask" data-id="${t.id}" aria-label="Удалить">×</button></div>`).join("")}</div>`
-      : `<div class="empty">Нажми «Собрать план дня»: добавлю ежедневные привычки, невыполненное со вчера и шаги к целям месяца. Свои задачи допиши ниже.</div>`}
-    <form class="inline" data-form="addtask"><input type="text" id="f-task" name="text" placeholder="Новая задача на этот день" autocomplete="off"><button class="btn">Добавить</button></form>
-    <button class="btn gold" data-act="buildplan">Собрать план дня</button>
-  </div>
-
-  <div class="card">
-    <div class="card-h"><h2>Сон</h2><span class="meta">ночь перед этим днём · цель ${s.sleepHours} ч</span></div>
-    <div class="grid2">
-      <label class="f">Легла<input type="time" id="s-bed" data-field="sleep.bed" value="${esc(d.sleep.bed || "")}"></label>
-      <label class="f">Проснулась<input type="time" id="s-wake" data-field="sleep.wake" value="${esc(d.sleep.wake || "")}"></label>
-    </div>
-    ${sh != null ? `<div class="row"><span class="big">${hm(sh)}</span><span class="small ${sh >= s.sleepHours ? "" : "muted"}">${sh >= s.sleepHours ? "норма выполнена" : "недосып " + hm(s.sleepHours - sh)}</span></div>` : ""}
-    <div class="eyebrow">Качество сна</div>${scale("sleep.q", d.sleep.q, "разбитая", "выспалась")}
-  </div>
 
   <div class="card">
     <div class="card-h"><h2>Питание</h2><button class="btn sm" data-act="view" data-v="food">Открыть дневник</button></div>
@@ -325,9 +297,7 @@ function vToday() {
   </div>
 
   <div class="card">
-    <div class="card-h"><h2>Вода и тело</h2><span class="meta">цель ${(s.water / 1000).toString().replace(".", ",")} л</span></div>
-    <div class="row"><span class="big">${d.water}<small> мл</small></span>
-      <button class="btn sm" data-act="water" data-n="250">+250</button><button class="btn sm" data-act="water" data-n="500">+500</button><button class="btn sm" data-act="water" data-n="-250">−250</button></div>
+    <div class="card-h"><h2>Тело</h2></div>
     <div class="grid2">
       <label class="f">Вес утром, кг<input type="number" step="0.1" inputmode="decimal" id="b-w" data-field="weight" value="${d.weight ?? ""}" placeholder="${w ? r1(w) : ""}"></label>
       <label class="f">Шаги<input type="number" inputmode="numeric" id="b-s" data-field="steps" value="${d.steps ?? ""}"></label>
@@ -342,14 +312,6 @@ function vToday() {
       <input type="number" id="w-min" name="min" placeholder="минут" inputmode="numeric" style="flex:1 1 80px" required>
       <button class="btn">Добавить</button>
     </form>
-  </div>
-
-  <div class="card">
-    <div class="card-h"><h2>Самочувствие</h2></div>
-    <div class="eyebrow">Настроение</div>${scale("health.mood", d.health.mood, "плохо", "отлично")}
-    <div class="eyebrow">Энергия</div>${scale("health.energy", d.health.energy, "нет сил", "много сил")}
-    <label class="check"><input type="checkbox" data-act="vit" ${d.health.vit ? "checked" : ""}> Витамины и лекарства приняты</label>
-    <label class="f">Симптомы, цикл, заметки<textarea id="h-note" data-field="health.note" placeholder="Например: болит голова, ПМС, тянет на сладкое">${esc(d.health.note || "")}</textarea></label>
   </div>`;
 }
 
