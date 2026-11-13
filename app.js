@@ -234,8 +234,6 @@ const VIEWS_LIST = [
   ["today", "Сегодня", '<path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4"/><circle cx="12" cy="12" r="4"/>'],
   ["chat", "Чат", '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/>'],
   ["food", "Питание", '<path d="M7 3v8a3 3 0 0 0 6 0V3M10 3v18M17 3c-1.7 1.5-2.5 4-2.5 7H17v11"/>'],
-  ["money", "Финансы", '<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 15h2"/>'],
-  ["goals", "Цели", '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".8"/>'],
   ["stats", "Аналитика", '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>'],
   ["setup", "Профиль", '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>']
 ];
