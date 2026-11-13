@@ -280,12 +280,10 @@ function nextReminder() {
 /* ---------- views ---------- */
 function vToday() {
   const k = ui.date, d = getDay(k), T = targets(), e = eaten(d);
-  const nr = k === todayKey() ? nextReminder() : null;
   const w = lastWeight(k);
   return `
   ${datebar(k)}
   <div class="daily"><div class="eyebrow">Послание дня</div><p>${esc(dailyNote(k))}</p></div>
-  ${nr ? `<div class="next"><div class="t">${esc(nr.time)}</div><div class="small"><div class="eyebrow">Следующее напоминание</div>${esc(nr.text)}</div></div>` : ""}
 
   <div class="card">
     <div class="card-h"><h2>Питание</h2><button class="btn sm" data-act="view" data-v="food">Открыть дневник</button></div>
