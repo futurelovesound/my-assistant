@@ -690,7 +690,8 @@ document.addEventListener("click", e => {
   else if (a === "clearmanual") mutSettings(s => s.manual = null);
   else if (a === "export") exportData();
   else if (a === "chatex") sendChat(b.dataset.t);
-  else if (a === "chatphotox") { ui.chatPhoto = null; render(); }
+  else if (a === "chatphotox") { const draft = $("#chat-t") ? $("#chat-t").value : ""; ui.chatPhotos.splice(Number(b.dataset.i), 1); render(); const t = $("#chat-t"); if (t) t.value = draft; }
+  else if (a === "chatmic") toggleMic(b);
   else if (a === "chatclear") put("chat/main", { msgs: [] });
   else if (a === "pushon") enablePush();
   else if (a === "pushoff") disablePush();
@@ -701,7 +702,7 @@ document.addEventListener("change", e => {
   if (el.id === "imp-file") { if (el.files[0]) importData(el.files[0]); el.value = ""; return; }
   if (el.id === "chat-photo") {
     const draft = $("#chat-t") ? $("#chat-t").value : "";
-    ui.chatPhoto = el.files[0] || null; el.value = ""; render();
+    ui.chatPhotos = [...(ui.chatPhotos || []), ...el.files]; el.value = ""; render();
     const t = $("#chat-t"); if (t) { t.value = draft; t.focus(); }
     return;
   }
@@ -979,14 +980,39 @@ function vChat() {
     ${ui.chatBusy ? `<div class="bubble bot muted">Записываю…</div>` : ""}
   </div>
   <form class="chat-in" data-form="chat">
-    ${ui.chatPhoto ? `<div class="row chat-ph"><span class="tag habit">фото</span><span class="small muted grow">${esc(ui.chatPhoto.name || "из галереи")}</span><button class="x" type="button" data-act="chatphotox" aria-label="Убрать фото">×</button></div>` : ""}
+    ${(ui.chatPhotos || []).length ? `<div class="chat-ph">${ui.chatPhotos.map((f, i) => `<span class="ph"><img src="${thumbUrl(f)}" alt=""><button class="x" type="button" data-act="chatphotox" data-i="${i}" aria-label="Убрать фото">×</button></span>`).join("")}<span class="small muted">${ui.chatPhotos.length} фото</span></div>` : ""}
     <label class="btn" for="chat-photo" style="cursor:pointer;padding-inline:12px" aria-label="Прикрепить фото" title="Фото из галереи или камеры"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg></label>
-    <input type="file" id="chat-photo" accept="image/*" hidden>
+    <input type="file" id="chat-photo" accept="image/*" multiple hidden>
+    <button class="btn mic" type="button" data-act="chatmic" aria-label="Надиктовать голосом" title="Надиктовать голосом"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
     <textarea id="chat-t" name="text" rows="2" placeholder="Например: съела 2 яйца и тост, потратила 3000 на кофе" autocomplete="off"></textarea>
     <button class="btn pri" ${ui.chatBusy ? "disabled" : ""} aria-label="Отправить">Отправить</button>
   </form>`;
 }
-function chatPrompt(text, history, hasPhoto) {
+// Photo previews: one object URL per File, kept for the life of the page.
+const thumbs = new WeakMap();
+const thumbUrl = f => { if (!thumbs.has(f)) thumbs.set(f, URL.createObjectURL(f)); return thumbs.get(f); };
+
+/* ---------- voice input (browser speech recognition, Russian) ---------- */
+let rec = null;
+function toggleMic(btn) {
+  if (rec) { rec.stop(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { toast("Здесь голосовой ввод недоступен. Нажми микрофон на клавиатуре телефона, он тоже пишет текст голосом.", 7000); return; }
+  const ta = $("#chat-t"), base = ta ? ta.value.trim() : "";
+  let said = "";
+  rec = new SR(); rec.lang = "ru-RU"; rec.continuous = true; rec.interimResults = true;
+  rec.onresult = ev => {
+    let interim = ""; said = "";
+    for (const r of ev.results) (r.isFinal ? (said += r[0].transcript + " ") : (interim += r[0].transcript));
+    const t = $("#chat-t"); if (t) t.value = [base, (said + interim).trim()].filter(Boolean).join(" ");
+  };
+  rec.onerror = ev => { if (ev.error === "not-allowed" || ev.error === "service-not-allowed") toast("Разреши доступ к микрофону в настройках или нажми микрофон на клавиатуре.", 7000); };
+  rec.onend = () => { rec = null; const b = $(".btn.mic"); if (b) b.classList.remove("on"); };
+  try { rec.start(); btn.classList.add("on"); toast("Говори, я записываю. Нажми ещё раз, чтобы остановить."); }
+  catch (e) { rec = null; toast("Не получилось включить микрофон."); }
+}
+
+function chatPrompt(text, history, nPhotos, part) {
   const k = todayKey(), d = getDay(k), T = targets(), e = eaten(d), m = monthTotals(ymOf(k)), s = settings(), now = new Date();
   const ctx = {
     now: `${k} ${z(now.getHours())}:${z(now.getMinutes())}, ${weekday(k)}`,
@@ -1020,7 +1046,7 @@ function chatPrompt(text, history, hasPhoto) {
 
 Контекст: ${JSON.stringify(ctx)}
 ${history.length ? "Предыдущие сообщения:\n" + history.map(m => (m.role === "user" ? "Она: " : "Ты: ") + m.text).join("\n") + "\n" : ""}
-${hasPhoto ? "К сообщению приложено фото. Еда: оцени блюда, вес и КБЖУ, добавь add_meal. Чек, скрин перевода или выписки: добавь add_tx с суммой и категорией. Скрин списка дел или заметки: добавь задачи. Если неясно, что сделать с фото, опиши, что видишь, и спроси.\n" : ""}Новое сообщение: ${text || "(только фото)"}`;
+${nPhotos ? `К сообщению приложено фото: ${nPhotos}${part ? ` (это часть ${part}, остальные фото обрабатываются отдельно, записывай только то, что видишь на этих)` : ""}. Каждое фото разбери отдельно. Еда: оцени блюда, вес и КБЖУ, добавь add_meal. Чек, скрин перевода или выписки: добавь add_tx с суммой и категорией. Скрин списка дел или заметки: добавь задачи. Если неясно, что сделать с фото, опиши, что видишь, и спроси.\n` : ""}Новое сообщение: ${text || "(только фото)"}`;
 }
 function applyActions(list) {
   const done = [], t = todayKey();
@@ -1085,19 +1111,29 @@ function applyActions(list) {
   return done;
 }
 async function sendChat(text) {
-  text = String(text || "").trim(); const photo = ui.chatPhoto;
-  if ((!text && !photo) || ui.chatBusy) return;
+  if (rec) rec.stop();
+  text = String(text || "").trim(); const photos = ui.chatPhotos || [];
+  if ((!text && !photos.length) || ui.chatBusy) return;
   const ta = $("#chat-t"); if (ta) ta.value = "";
-  ui.chatPhoto = null;
+  ui.chatPhotos = [];
   const history = getChat().msgs.slice(-6);
-  put("chat/main", { msgs: [...getChat().msgs, { id: uid(), role: "user", text: (photo ? "📷 Фото" + (text ? "\n" : "") : "") + text, ts: Date.now() }].slice(-40) });
+  put("chat/main", { msgs: [...getChat().msgs, { id: uid(), role: "user", text: (photos.length ? `📷 Фото: ${photos.length}` + (text ? "\n" : "") : "") + text, ts: Date.now() }].slice(-40) });
   ui.chatBusy = true; render(); scrollChat();
   let reply, acts = [];
   try {
-    const image = photo ? await shrinkImage(photo) : null;
-    const res = await askJSON(chatPrompt(text, history, !!photo), image);
-    acts = applyActions(Array.isArray(res && res.actions) ? res.actions : []);
-    reply = String((res && res.reply) || (acts.length ? "Готово." : "Не поняла, напиши по-другому."));
+    // Photos go in batches of 6 per request so a large album stays within request size limits.
+    const size = photos.length > 12 ? 900 : photos.length > 4 ? 1100 : 1280, batches = [];
+    for (let i = 0; i < photos.length; i += 6) batches.push(photos.slice(i, i + 6));
+    if (!batches.length) batches.push([]);
+    const replies = [];
+    for (let i = 0; i < batches.length; i++) {
+      const images = await Promise.all(batches[i].map(f => shrinkImage(f, size)));
+      const part = batches.length > 1 ? `${i + 1} из ${batches.length}` : "";
+      const res = await askJSON(chatPrompt(text, history, images.length, part), images);
+      acts.push(...applyActions(Array.isArray(res && res.actions) ? res.actions : []));
+      if (res && res.reply) replies.push(String(res.reply));
+    }
+    reply = replies.join("\n\n") || (acts.length ? "Готово." : "Не поняла, напиши по-другому.");
   } catch (e) { reply = aiErr(e && e.code); }
   put("chat/main", { msgs: [...getChat().msgs, { id: uid(), role: "assistant", text: reply, acts, ts: Date.now() }].slice(-40) });
   ui.chatBusy = false; render(); scrollChat();
@@ -1106,7 +1142,7 @@ function scrollChat() { if (ui.view === "chat") requestAnimationFrame(() => wind
 document.addEventListener("keydown", e => {
   if (e.target.id === "chat-t" && e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); e.target.form.requestSubmit(); }
 });
-async function askJSON(prompt, image) { const res = await callAI({ kind: "chat", prompt, image }); return res.json; }
+async function askJSON(prompt, images) { const res = await callAI({ kind: "chat", prompt, images: images || [] }); return res.json; }
 
 /* ---------- in-app reminders ---------- */
 let lastMin = new Date().getHours() * 60 + new Date().getMinutes();

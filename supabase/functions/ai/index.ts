@@ -78,8 +78,9 @@ Deno.serve(async (req) => {
     if (body.kind === "chat" && typeof body.prompt === "string") {
       // The app builds the prompt (its data + allowed actions); the reply is {reply, actions}.
       const text = body.prompt.slice(0, 60000);
-      const content: Anthropic.Beta.BetaContentBlockParam[] | string = body.image
-        ? [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: body.image } }, { type: "text", text }]
+      const images: string[] = Array.isArray(body.images) ? body.images.slice(0, 20) : body.image ? [body.image] : [];
+      const content: Anthropic.Beta.BetaContentBlockParam[] | string = images.length
+        ? [...images.map((data): Anthropic.Beta.BetaContentBlockParam => ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data } })), { type: "text", text }]
         : text;
       const msg = await create(client, { output_config: { effort: "low" }, messages: [{ role: "user", content }] });
       if (msg.stop_reason === "refusal") return json({ error: "refused" }, 422);
