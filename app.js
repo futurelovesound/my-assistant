@@ -464,47 +464,28 @@ function vGoals() {
 
 function periodKeys(n) { const t = todayKey(), a = []; for (let i = n - 1; i >= 0; i--) a.push(addDays(t, -i)); return a; }
 function vStats() {
-  const s = settings(), T = targets(), keys = periodKeys(ui.period), days = keys.map(getDay);
-  const sl = days.map(sleepH), kc = days.map(d => d.meals.length ? eaten(d).k : null), pr = days.map(d => d.meals.length ? eaten(d).p : null);
-  const mood = days.map(d => d.health.mood || null), tsk = days.map(taskStats);
-  const beds = days.map(d => { const b = toMin(d.sleep.bed); return b == null ? null : (b < 720 ? b + 1440 : b); });
-  const bm = avg(beds), bsd = bm != null ? Math.sqrt(avg(beds.map(b => b == null ? null : (b - bm) ** 2))) : null;
+  const T = targets(), keys = periodKeys(ui.period), days = keys.map(getDay);
+  const kc = days.map(d => d.meals.length ? eaten(d).k : null), pr = days.map(d => d.meals.length ? eaten(d).p : null);
   const work = sum(days.map(d => d.workouts.length)), workMin = sum(days.map(d => sum(d.workouts.map(w => w.min))));
-  const tDone = sum(tsk.map(x => x.done)), tAll = sum(tsk.map(x => x.total));
-  const spend = keys.map(k => sum(getMonth(ymOf(k)).tx.filter(x => x.t === "out" && x.d === k).map(x => x.amt)));
   const ins = [];
-  const avgSl = avg(sl);
-  if (avgSl != null) ins.push([avgSl >= s.sleepHours - 0.25 ? "good" : "warn", `Средний сон ${hm(avgSl)} при цели ${s.sleepHours} ч.`]);
-  if (bsd != null && beds.filter(x => x != null).length >= 3) ins.push([bsd <= 45 ? "good" : "warn", `Время отбоя гуляет на ±${Math.round(bsd)} мин. ${bsd > 45 ? "Стабильное время отхода ко сну важнее, чем «отоспаться» в выходные." : "Режим стабильный."} Среднее время отбоя ${z(Math.floor(bm / 60) % 24)}:${z(Math.round(bm % 60))}.`]);
-  const pairs = days.map((d, i) => ({ s: sl[i], m: mood[i], k: kc[i] })).filter(x => x.s != null);
-  const good = pairs.filter(x => x.s >= 7), bad = pairs.filter(x => x.s < 7);
-  if (good.length >= 2 && bad.length >= 2) {
-    const mg = avg(good.map(x => x.m)), mb = avg(bad.map(x => x.m)), kg = avg(good.map(x => x.k)), kb = avg(bad.map(x => x.k));
-    if (mg != null && mb != null) ins.push(["", `Настроение после сна от 7 ч: ${r1(mg)} из 5, после короткого сна: ${r1(mb)}.`]);
-    if (kg != null && kb != null && kb > kg * 1.05) ins.push(["warn", `После недосыпа ешь в среднем на ${Math.round(kb - kg)} ккал больше. Сон напрямую влияет на похудение.`]);
-  }
   const avgK = avg(kc), avgP = avg(pr), logged = kc.filter(x => x != null).length;
   if (T && avgK != null) ins.push([Math.abs(avgK - T.kcal) <= T.kcal * 0.1 ? "good" : avgK > T.kcal ? "bad" : "warn", `В среднем ${Math.round(avgK)} ккал при норме ${T.kcal}. Еда записана в ${logged} из ${ui.period} дней.`]);
   if (T && avgP != null && avgP < T.p * 0.8) ins.push(["warn", `Белка ${Math.round(avgP)} г при норме ${T.p} г. Добавь творог, яйца, курицу или рыбу в каждый приём пищи.`]);
-  if (tAll) ins.push([tDone / tAll >= 0.7 ? "good" : "warn", `Выполнено ${Math.round(tDone / tAll * 100)}% задач (${tDone} из ${tAll}).`]);
   ins.push([work >= ui.period / 7 * 3 ? "good" : "warn", `Тренировок: ${work}, всего ${workMin} мин. ВОЗ советует от 150 мин в неделю.`]);
   return `
   <div class="row" style="justify-content:space-between"><h1>Аналитика</h1><div class="seg">${[7, 14, 30].map(n => `<button data-act="period" data-n="${n}" class="${ui.period === n ? "on" : ""}">${n} дней</button>`).join("")}</div></div>
-  <div class="card"><div class="grid4">
-    <div class="tile"><span class="k">Сон в среднем</span><span class="v">${hm(avgSl)}</span></div>
+  <div class="card"><div class="grid4" style="grid-template-columns:repeat(3,minmax(0,1fr))">
     <div class="tile"><span class="k">Калорий в день</span><span class="v">${avgK != null ? Math.round(avgK) : "—"}</span></div>
-    <div class="tile"><span class="k">Задачи</span><span class="v">${tAll ? Math.round(tDone / tAll * 100) + "%" : "—"}</span></div>
-    <div class="tile"><span class="k">Потрачено</span><span class="v">${tg(sum(spend))}</span></div>
+    <div class="tile"><span class="k">Белка в день</span><span class="v">${avgP != null ? Math.round(avgP) + " г" : "—"}</span></div>
+    <div class="tile"><span class="k">Спорт</span><span class="v">${workMin} мин</span></div>
   </div></div>
   <div class="card"><div class="card-h"><h2>ИИ-разбор периода</h2></div>
-    <div class="small muted">Посмотрит на сон, питание, спорт, настроение, задачи и деньги вместе и даст 3–5 конкретных действий.</div>
+    <div class="small muted">Посмотрит на питание, вес и спорт вместе и даст 3–5 конкретных действий.</div>
     <button class="btn pri" data-act="ai" ${ui.aiBusy ? "disabled" : ""}>${ui.aiBusy ? "Анализирую…" : "Сделать разбор"}</button>
     ${ui.aiText ? `<div class="ai-out" id="ai-out">${esc(ui.aiText)}</div>` : `<div id="ai-out" hidden class="ai-out"></div>`}
   </div>
   <div class="card"><h2>Выводы</h2><div>${ins.map(([c, x]) => `<div class="insight"><span class="dot ${c}"></span><span>${x}</span></div>`).join("")}</div></div>
-  <div class="card"><div class="card-h"><h2>Сон, часов</h2><span class="meta">линия: цель ${s.sleepHours} ч</span></div>${bars(keys, sl, s.sleepHours, "var(--sky)", v => r1(v))}</div>
   <div class="card"><div class="card-h"><h2>Калории</h2><span class="meta">${T ? "линия: норма " + T.kcal : ""}</span></div>${bars(keys, kc, T && T.kcal, "var(--gold)", v => Math.round(v))}</div>
-  <div class="card"><div class="card-h"><h2>Расходы по дням, ₸</h2></div>${bars(keys, spend, null, "var(--ink)", v => Math.round(v / 1000) + "k")}</div>
   ${weightCard()}`;
 }
 
