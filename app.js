@@ -1103,6 +1103,15 @@ document.addEventListener("keydown", e => {
 async function askJSON(prompt, images) { images = images || []; const res = await callAI({ kind: "chat", prompt, images, image: images[0] || null }); return res.json; }
 
 /* ---------- in-app reminders ---------- */
+/* ---------- evening theme: dark from 19:00 to 07:00 ---------- */
+function applyTheme() {
+  const h = new Date().getHours(), dark = h >= 19 || h < 7, root = document.documentElement;
+  if ((root.dataset.theme === "dark") === dark) return;
+  if (dark) root.dataset.theme = "dark"; else delete root.dataset.theme;
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = dark ? "#0A0A0B" : "#FFFFFF";
+}
+applyTheme();
+
 let lastMin = new Date().getHours() * 60 + new Date().getMinutes();
 setInterval(() => {
   const now = new Date(), m = now.getHours() * 60 + now.getMinutes();
@@ -1110,6 +1119,7 @@ setInterval(() => {
   const hit = settings().reminders.filter(r => { const t = toMin(r.time); return remActive(r) && t > lastMin && t <= m; });
   lastMin = m;
   if (hit.length && !document.hidden) toast("Напоминание: " + hit.map(r => r.text).join(" · "), 12000);
+  applyTheme();
   if (ui.view === "today") render();
 }, 20000);
 

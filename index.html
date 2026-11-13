@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>Мой ассистент</title>
 <meta name="description" content="Сон, питание, задачи, спорт, здоровье и финансы в одном месте">
 <link rel="manifest" href="manifest.webmanifest">
@@ -25,12 +25,25 @@ img{max-width:100%}
   /* «Чистый лист»: white page, black type and buttons, powder pink and deep green accents. One light theme. */
   --bg:#FFFFFF; --surface:#F6F3F4; --surface-2:#ECE7E9; --ink:#0D0D0D; --muted:#6B6468; --line:#E6E0E3;
   --sky:#1C6B45; --sky-soft:#DDF2E6; --gold:#C93F75; --gold-soft:#FBE3EC; --pink:#F4A6C4;
-  --good:#1C6B45; --warn:#B8681A; --bad:#C3352D; --on-sky:#FFFFFF;
+  --good:#1C6B45; --warn:#B8681A; --bad:#C3352D; --on-sky:#FFFFFF; --on-pink:#0D0D0D; --daily-bg:#0D0D0D; --daily-fg:#FFFFFF;
   --f-display:"Unbounded", "Manrope", system-ui, sans-serif;
   --f-body:"Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
   --r:14px; color-scheme:light;
 }
+/* «Неон»: evening theme, switched on by app.js from 19:00 to 07:00 local time. */
+:root[data-theme="dark"]{
+  --bg:#0A0A0B; --surface:#17161A; --surface-2:#222027; --ink:#F6F4F5; --muted:#9C949A; --line:#2A2830;
+  --sky:#2EE07F; --sky-soft:#11301F; --gold:#FF5C9D; --gold-soft:#36131F; --pink:#FF3D8B;
+  --good:#2EE07F; --warn:#EFA04F; --bad:#EF6A5E; --on-sky:#0A0A0B; --on-pink:#0A0A0B; --daily-bg:#1C1A20; --daily-fg:#F6F4F5;
+  color-scheme:dark;
+}
 *{box-sizing:border-box}
+/* Scroll only vertically: no sideways drift, no rubber-band bounce that drags the tab bar, no zoom on input focus (iOS zooms below 16px). */
+html,body{overflow-x:hidden;overscroll-behavior:none;max-width:100%}
+body{touch-action:pan-y;-webkit-text-size-adjust:100%}
+input,select,textarea{font-size:16px!important}
+.chat-ph{touch-action:pan-x}
+nav.tabs{touch-action:none}
 body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;font-variant-numeric:tabular-nums}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -48,7 +61,7 @@ nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surf
 nav.tabs .in{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;width:100%;max-width:720px}
 nav.tabs button{background:none;border:0;padding:6px 2px;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.68rem;color:var(--muted);cursor:pointer}
 nav.tabs button svg{width:22px;height:22px}
-nav.tabs button.on{color:var(--ink);background:var(--pink)}
+nav.tabs button.on{color:var(--on-pink);background:var(--pink)}
 @media (min-width:760px){
   nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);bottom:auto;border-top:0;border-bottom:1px solid var(--line);background:var(--bg);padding:6px 0;margin-bottom:14px}
   nav.tabs button{flex-direction:row;justify-content:center;gap:6px;font-size:.82rem;padding:8px}
@@ -96,7 +109,7 @@ form.inline input{flex:1}
 .ring svg{width:100%;max-width:84px;height:auto}
 .ring .lb{font-size:.72rem;color:var(--muted)}
 .ring .vl{font-weight:700;font-size:.85rem}
-.daily{background:var(--ink);color:var(--bg);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.daily{background:var(--daily-bg);color:var(--daily-fg);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:6px}
 .daily .eyebrow{color:var(--pink)}
 .daily p{margin:0;font-family:var(--f-display);font-weight:500;font-size:1.02rem;line-height:1.4;text-wrap:pretty}
 .next{display:flex;gap:12px;align-items:center;background:var(--gold-soft);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);border-radius:var(--r);padding:12px 14px}
@@ -152,7 +165,7 @@ form.inline input{flex:1}
 
 .chat-log{display:flex;flex-direction:column;gap:8px;min-height:calc(100dvh - 270px)}
 .bubble{max-width:86%;padding:10px 13px;border-radius:16px;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.45}
-.bubble.me{align-self:flex-end;background:var(--pink);color:var(--ink);border-bottom-right-radius:5px}
+.bubble.me{align-self:flex-end;background:var(--pink);color:var(--on-pink);border-bottom-right-radius:5px}
 .bubble.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:5px}
 .acts{display:flex;flex-direction:column;gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:.8rem;color:var(--muted)}
 .acts span::before{content:"✓ ";color:var(--good);font-weight:700}
