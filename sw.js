@@ -1,5 +1,5 @@
 // Service worker: offline app shell + push notifications.
-const CACHE = "assistant-v1";
+const CACHE = "assistant-v2";
 const SHELL = ["./", "index.html", "app.js", "config.js", "manifest.webmanifest", "icons/icon-192.png"];
 
 self.addEventListener("install", e => {
