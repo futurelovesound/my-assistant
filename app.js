@@ -330,30 +330,10 @@ function vFood() {
   </div>
 
   <div class="card">
-    <div class="card-h"><h2>Добавить еду</h2><div class="seg">${MEALS.map(m => `<button data-act="meal" data-m="${m}" class="${ui.meal === m ? "on" : ""}">${m}</button>`).join("")}</div></div>
-    <div class="eyebrow">Быстро через ИИ</div>
-    <textarea id="ai-food" placeholder="Опиши, что съела: «плов 250 г, салат из огурцов, чай с 2 ложками сахара»"></textarea>
-    <div class="row"><label class="btn sm" for="food-photo" style="cursor:pointer">Фото тарелки</label><input type="file" id="food-photo" accept="image/*" hidden><span id="photo-name" class="small muted"></span>
-      <button class="btn pri" data-act="parsefood" ${ui.parseBusy ? "disabled" : ""}>${ui.parseBusy ? "Считаю…" : "Посчитать КБЖУ"}</button></div>
-    ${ui.parsed ? `<div class="list">${ui.parsed.map((x, i) => `<div class="li"><span class="grow">${esc(x.name)} <span class="muted small">${x.grams ? Math.round(x.grams) + " г" : ""}</span></span><span class="small muted">Б ${Math.round(x.p)} Ж ${Math.round(x.f)} У ${Math.round(x.c)}</span><span class="num">${Math.round(x.kcal)}</span><button class="x" data-act="dropparsed" data-i="${i}" aria-label="Убрать">×</button></div>`).join("")}</div>
-      <div class="row"><button class="btn pri" data-act="addparsed">Добавить в «${ui.meal}»</button><button class="btn" data-act="clearparsed">Отмена</button><span class="small muted">Оценка ИИ примерная, ±15–20%.</span></div>` : ""}
-    <div class="eyebrow">Из базы продуктов (на 100 г)</div>
-    <div class="row"><input type="search" id="food-q" placeholder="Найти: гречка, манты, творог…" value="${esc(ui.foodQ)}" style="flex:3 1 160px" autocomplete="off"><input type="number" id="food-g" value="100" inputmode="numeric" style="flex:1 1 70px" aria-label="Граммы"><span class="small muted">г</span></div>
-    <div class="res" id="food-res">${foodResults()}</div>
-    <details><summary class="small" style="cursor:pointer">Ввести вручную</summary>
-      <form class="stack" data-form="addmanual" style="margin-top:10px;gap:8px">
-        <input type="text" id="m-name" name="name" placeholder="Название" required>
-        <div class="grid4"><input type="number" step="any" id="m-k" name="k" placeholder="ккал" required><input type="number" step="any" id="m-p" name="p" placeholder="Б, г"><input type="number" step="any" id="m-f" name="f" placeholder="Ж, г"><input type="number" step="any" id="m-c" name="c" placeholder="У, г"></div>
-        <label class="check"><input type="checkbox" name="save"> Сохранить в мои продукты (значения на 100 г)</label>
-        <button class="btn">Добавить порцию</button>
-      </form></details>
-  </div>
-
-  <div class="card">
     <div class="card-h"><h2>Дневник</h2><span class="meta">${Math.round(e.k)} ккал · Б ${Math.round(e.p)} · Ж ${Math.round(e.f)} · У ${Math.round(e.c)}</span></div>
     ${d.meals.length ? byMeal.filter(([, a]) => a.length).map(([m, a]) => `<div class="meal-h"><span>${m}</span><span class="muted">${Math.round(sum(a.map(x => x.k)))} ккал</span></div>
       <div class="list">${a.map(x => `<div class="li"><span class="grow">${esc(x.name)} <span class="muted small">${x.g ? Math.round(x.g) + " г" : ""}</span></span><span class="small muted">Б ${Math.round(x.p)} Ж ${Math.round(x.f)} У ${Math.round(x.c)}</span><span class="num">${Math.round(x.k)}</span><button class="x" data-act="delmeal" data-id="${x.id}" aria-label="Удалить">×</button></div>`).join("")}</div>`).join("")
-      : `<div class="empty">Пока ничего не записано за этот день.</div>`}
+      : `<div class="empty">Пока ничего не записано за этот день. Напиши или пришли фото еды в чат, и оно появится здесь.</div><button class="btn" data-act="view" data-v="chat">Открыть чат</button>`}
   </div>
   ${weightCard()}`;
 }
