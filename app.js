@@ -587,7 +587,12 @@ function render() {
   if (focusId) { const el = document.getElementById(focusId); if (el) { el.focus({ preventScroll: true }); if (sel) try { el.setSelectionRange(sel[0], sel[1]); } catch (e) {} } }
   if (photo && $("#food-photo")) { try { const dt = new DataTransfer(); dt.items.add(photo); $("#food-photo").files = dt.files; $("#photo-name").textContent = photo.name; } catch (e) {} }
   renderTabs();
+  // Chat opens at the latest message: on entering the tab and whenever new messages arrive.
+  const n = ui.view === "chat" ? getChat().msgs.length : -1;
+  if (n >= 0 && (lastChat.view !== "chat" || n !== lastChat.n)) scrollChat();
+  lastChat = { view: ui.view, n };
 }
+let lastChat = { view: null, n: -1 };
 let toastT;
 function toast(msg, ms = 3500) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, ms); }
 
@@ -607,7 +612,7 @@ function buildPlan() {
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-act]"); if (!b || b.tagName === "INPUT" || b.tagName === "SELECT") return;
   const a = b.dataset.act, k = ui.date;
-  if (a === "view") { ui.view = b.dataset.v; try { history.replaceState(null, "", "#" + ui.view); } catch (er) {} render(); window.scrollTo(0, 0); }
+  if (a === "view") { ui.view = b.dataset.v; try { history.replaceState(null, "", "#" + ui.view); } catch (er) {} window.scrollTo(0, 0); render(); }
   else if (a === "day") { const nk = addDays(ui.date, +b.dataset.n); if (nk <= todayKey()) { ui.date = nk; ui.month = ymOf(nk); render(); } }
   else if (a === "month") { ui.month = addMonths(ui.month, +b.dataset.n); render(); }
   else if (a === "deltask") mutDay(k, d => d.tasks = d.tasks.filter(t => t.id !== b.dataset.id));
