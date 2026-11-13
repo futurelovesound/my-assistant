@@ -1120,7 +1120,8 @@ function scrollChat() { if (ui.view === "chat") requestAnimationFrame(() => wind
 document.addEventListener("keydown", e => {
   if (e.target.id === "chat-t" && e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); e.target.form.requestSubmit(); }
 });
-async function askJSON(prompt, images) { const res = await callAI({ kind: "chat", prompt, images: images || [] }); return res.json; }
+// `image` keeps photos working with the older ai function that reads only one picture.
+async function askJSON(prompt, images) { images = images || []; const res = await callAI({ kind: "chat", prompt, images, image: images[0] || null }); return res.json; }
 
 /* ---------- in-app reminders ---------- */
 let lastMin = new Date().getHours() * 60 + new Date().getMinutes();
