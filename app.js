@@ -1103,9 +1103,9 @@ document.addEventListener("keydown", e => {
 async function askJSON(prompt, images) { images = images || []; const res = await callAI({ kind: "chat", prompt, images, image: images[0] || null }); return res.json; }
 
 /* ---------- in-app reminders ---------- */
-/* ---------- evening theme: dark from 19:00 to 07:00 ---------- */
+/* ---------- evening theme: dark from 18:00 to 06:00 ---------- */
 function applyTheme() {
-  const h = new Date().getHours(), dark = h >= 19 || h < 7, root = document.documentElement;
+  const h = new Date().getHours(), dark = h >= 18 || h < 6, root = document.documentElement;
   if ((root.dataset.theme === "dark") === dark) return;
   if (dark) root.dataset.theme = "dark"; else delete root.dataset.theme;
   const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = dark ? "#0A0A0B" : "#FFFFFF";
